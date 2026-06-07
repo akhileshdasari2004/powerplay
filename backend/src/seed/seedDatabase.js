@@ -82,7 +82,7 @@ async function seedCustomersAndInvoices({ onlyIfEmpty = false } = {}) {
   }
 
   let customersImported = 0;
-  let customersSkipped = existingCustomers.length;
+  let customersSkipped = 0;
 
   if (uniqueCustomers.size > 0) {
     const inserted = await Customer.insertMany(Array.from(uniqueCustomers.values()), {
@@ -92,6 +92,8 @@ async function seedCustomersAndInvoices({ onlyIfEmpty = false } = {}) {
       customerIdMap.set(customerKey(cust.name, cust.company), cust._id.toString());
     });
     customersImported = inserted.length;
+    customersSkipped = existingCustomers.length;
+  } else {
     customersSkipped = existingCustomers.length;
   }
 
