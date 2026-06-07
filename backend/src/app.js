@@ -37,6 +37,22 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Root route - API info
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Powerplay API',
+    version: '1.0.0',
+    endpoints: {
+      health: '/health',
+      api: '/api',
+      auth: '/api/auth',
+      customers: '/api/customers',
+      invoices: '/api/invoices',
+      analytics: '/api/analytics',
+    },
+  });
+});
+
 app.use('/api', routes);
 
 app.use(notFoundHandler);
