@@ -62,7 +62,7 @@ const invoiceSchema = new mongoose.Schema(
   }
 );
 
-invoiceSchema.index({ invoiceId: 1 }, { unique: true });
+// Note: unique: true on field definition creates index automatically
 invoiceSchema.index({ customerId: 1 });
 invoiceSchema.index({ status: 1 });
 invoiceSchema.index({ issueDate: 1 });
