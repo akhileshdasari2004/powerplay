@@ -26,24 +26,16 @@ function mapListParams(params = {}) {
 export const invoiceApi = {
   async list(params = {}) {
     const response = await api.get(INVOICES_ENDPOINT, { params: mapListParams(params) });
-    console.log('[invoiceApi.list] raw response:', response);
-    console.log('[invoiceApi.list] response.data:', response?.data);
-    console.log('[invoiceApi.list] response.data.data:', response?.data?.data);
-    const unwrapped = unwrap(response);
-    console.log('[invoiceApi.list] unwrapped:', unwrapped);
-    return unwrapped;
+    return unwrap(response);
   },
 
   async getInvoices(params = {}) {
     const result = await this.list(params);
-    console.log('[invoiceApi.getInvoices] result:', result);
-    const returnValue = {
+    return {
       data: result.invoices ?? [],
       total: result.pagination?.total ?? 0,
       pagination: result.pagination,
     };
-    console.log('[invoiceApi.getInvoices] returnValue:', returnValue);
-    return returnValue;
   },
 
   async get(id) {

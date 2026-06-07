@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
@@ -6,7 +6,6 @@ import { usePagination } from '../hooks/usePagination';
 import { useDebounce } from '../hooks/useDebounce';
 import { invoiceApi } from '../services/invoiceApi';
 import { formatCurrency } from '../utils/formatCurrency';
-import { formatDate } from '../utils/formatDate';
 import StatsCard from '../components/StatsCard';
 import InvoiceTable from '../components/InvoiceTable';
 import FilterBar from '../components/FilterBar';
@@ -44,10 +43,15 @@ export function DashboardPage() {
   // Debounce search
   const debouncedSearch = useDebounce(searchValue, 300);
 
-  // Pagination
+  // Pagination - use individual primitives to avoid object reference issues
   const pagination = usePagination({
+    itemsPerPage: 10,
     initialPageSize: 10,
   });
+
+  // Stable reference to current page and page size for dependency arrays
+  const currentPage = pagination.currentPage;
+  const pageSize = pagination.pageSize;
 
   /**
    * Fetch dashboard statistics
@@ -55,18 +59,14 @@ export function DashboardPage() {
   const fetchStats = useCallback(async () => {
     try {
       setStatsLoading(true);
-      console.log('[DEBUG] Fetching stats...');
       const data = await invoiceApi.getInvoiceStats();
-      console.log('[DEBUG] Stats received:', data);
       setStats({
         totalRevenue: data.totalRevenue || 0,
         outstandingAmount: data.outstandingAmount || 0,
         overdueAmount: data.overdueAmount || 0,
         totalInvoices: data.totalInvoices || 0,
       });
-    } catch (error) {
-      console.error('[DEBUG] Failed to fetch stats:', error);
-      // Use fallback values on error
+    } catch (err) {
       setStats({
         totalRevenue: 0,
         outstandingAmount: 0,
@@ -79,14 +79,14 @@ export function DashboardPage() {
   }, []);
 
   /**
-   * Fetch invoices
+   * Fetch invoices - using primitives for deps to avoid infinite loop
    */
   const fetchInvoices = useCallback(async () => {
     try {
       setIsLoading(true);
       const params = {
-        page: pagination.currentPage,
-        pageSize: pagination.pageSize,
+        page: currentPage,
+        pageSize: pageSize,
         search: debouncedSearch,
         status: statusFilter,
         dateFrom,
@@ -98,28 +98,25 @@ export function DashboardPage() {
         if (!params[key]) delete params[key];
       });
 
-      console.log('[DEBUG] Fetching invoices with params:', params);
       const response = await invoiceApi.getInvoices(params);
-      console.log('[DEBUG] Invoices response:', response);
-      setInvoices(response.data || response.invoices || []);
+      const invoiceData = response.data;
+      if (Array.isArray(invoiceData)) {
+        setInvoices(invoiceData);
+      } else if (invoiceData && typeof invoiceData === 'object') {
+        setInvoices(invoiceData.invoices || []);
+      } else {
+        setInvoices([]);
+      }
       pagination.setTotal(response.total || 0);
-    } catch (error) {
-      console.error('[DEBUG] Failed to fetch invoices:', error);
+    } catch (err) {
       toast.error('Failed to load invoices. Please try again.');
       setInvoices([]);
     } finally {
       setIsLoading(false);
     }
-  }, [
-    pagination,
-    debouncedSearch,
-    statusFilter,
-    dateFrom,
-    dateTo,
-    toast,
-  ]);
+  }, [currentPage, pageSize, debouncedSearch, statusFilter, dateFrom, dateTo, pagination.setTotal, toast]);
 
-  // Fetch data on mount and when dependencies change
+  // Fetch data on mount
   useEffect(() => {
     fetchStats();
   }, [fetchStats]);
@@ -131,7 +128,7 @@ export function DashboardPage() {
   // Reset pagination when filters change
   useEffect(() => {
     pagination.goToPage(1);
-  }, [debouncedSearch, statusFilter, dateFrom, dateTo]);
+  }, [debouncedSearch, statusFilter, dateFrom, dateTo, pagination.goToPage]);
 
   /**
    * Handle filter reset
@@ -244,7 +241,6 @@ export function DashboardPage() {
     gap: '16px',
   };
 
-  // Responsive stats grid
   const responsiveStatsGrid = {
     '@media (maxWidth: 1024px)': {
       gridTemplateColumns: 'repeat(2, 1fr)',
@@ -259,27 +255,6 @@ export function DashboardPage() {
     fontWeight: 600,
     color: '#333333',
     margin: 0,
-  };
-
-  const emptyStateStyle = {
-    textAlign: 'center',
-    padding: '48px 24px',
-    backgroundColor: '#ffffff',
-    borderRadius: '8px',
-    border: '1px solid #e0e0e0',
-  };
-
-  const emptyStateTitleStyle = {
-    fontSize: '18px',
-    fontWeight: 600,
-    color: '#333333',
-    margin: '0 0 8px 0',
-  };
-
-  const emptyStateTextStyle = {
-    fontSize: '14px',
-    color: '#757575',
-    margin: '0 0 24px 0',
   };
 
   return (
@@ -373,9 +348,7 @@ export function DashboardPage() {
               totalPages={pagination.totalPages}
               totalItems={pagination.totalItems}
               pageSize={pagination.pageSize}
-              pageSizeOptions={pagination.pageSizeOptions}
               onPageChange={pagination.goToPage}
-              onPageSizeChange={pagination.changePageSize}
             />
           </div>
         )}

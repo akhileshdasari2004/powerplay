@@ -156,7 +156,7 @@ export const InvoiceTable = memo(function InvoiceTable({
         <tbody>
           {invoices.map((invoice) => (
             <tr
-              key={invoice.id}
+              key={invoice._id}
               style={trStyle}
               onClick={() => onRowClick?.(invoice)}
               onMouseEnter={(e) => {
@@ -166,9 +166,9 @@ export const InvoiceTable = memo(function InvoiceTable({
                 e.currentTarget.style.backgroundColor = 'transparent';
               }}
             >
-              <td style={tdStyle}>{invoice.invoiceNumber}</td>
-              <td style={tdStyle}>{invoice.customerName || invoice.customer?.name}</td>
-              <td style={tdStyle}>{formatDate(invoice.date)}</td>
+              <td style={tdStyle}>{invoice.invoiceId}</td>
+              <td style={tdStyle}>{invoice.customerId?.name || invoice.customerId?.company || 'N/A'}</td>
+              <td style={tdStyle}>{formatDate(invoice.issueDate)}</td>
               <td style={tdStyle}>{formatDate(invoice.dueDate)}</td>
               <td style={{ ...tdStyle, fontWeight: 500 }}>
                 {formatCurrency(invoice.total)}
